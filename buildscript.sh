@@ -32,7 +32,7 @@ NK_KSU_REPO="${NK_KSU_REPO:-https://github.com/OmarAlsmehan/KernelSU-Next.git}"
 
 # ── AnyKernel3 repository ────────────────────────────────────────
 NK_AK3_REPO="${NK_AK3_REPO:-https://github.com/OmarAlsmehan/AnyKernel3.git}"
-NK_AK3_BANNER_URL="${NK_AK3_BANNER_URL:-https://raw.githubusercontent.com/OmarAlsmehan/AnyKernel3/refs/heads/master/banner}"
+NK_AK3_BANNER_URL="${NK_AK3_BANNER_URL:-https://raw.githubusercontent.com/danjekb/pliczki/refs/heads/main/banner}"
 
 # ── Hook patch URLs ──────────────────────────────────────────────
 NK_HOOK_SCOPE_MIN_URL="${NK_HOOK_SCOPE_MIN_URL:-https://raw.githubusercontent.com/OmarAlsmehan/Random-stuff/e2dca691b866415c8ec59f306536f59c633be8e7/scope-min-manual-hook.1.6-5.4.patch}"
@@ -539,7 +539,7 @@ android/abi_gki_aarch64_zebra
     export KMI_SYMBOL_LIST_STRICT_MODE=0 KMI_ENFORCED=0
 
     COMREV=$(git rev-parse --short HEAD)
-    export LOCALVERSION="-NovaKernel-${BRANCH}-${KMI_GENERATION}-${COMREV}-${VARIANT}"
+    export LOCALVERSION="-CrappyKernel-${BRANCH}-${KMI_GENERATION}-${COMREV}-${VARIANT}"
 
     log_sep
     log_kv "Device:"    "$DEVICE ($VARIANT)"
@@ -812,7 +812,7 @@ package_anykernel3() {
             "$OUT_DIR/drivers/kernelsu/.ksu.o.cmd" 2>/dev/null | sed 's/^/-/' || true)
     fi
 
-    local ZIPNAME="NovaKernel_$(date +%Y%m%d)_${BUILD_TYPE}${KSU_VER}_${VARIANT}.zip"
+    local ZIPNAME="CrappyKernel_$(date +%Y%m%d)_${BUILD_TYPE}${KSU_VER}_${VARIANT}.zip"
     local ZIPOUT="$DEST/$ZIPNAME"
 
     log_step "Creating $ZIPNAME (AnyKernel3 flashable zip)..."
@@ -855,7 +855,7 @@ gen_zip() {
             "$OUT_DIR/drivers/kernelsu/.ksu.o.cmd" 2>/dev/null | sed 's/^/-/' || true)
     fi
 
-    local ZIPNAME="NovaKernel_$(date +%Y%m%d)_${BUILD_TYPE}${KSU_VER}_${VARIANT}.zip"
+    local ZIPNAME="CrappyKernel_$(date +%Y%m%d)_${BUILD_TYPE}${KSU_VER}_${VARIANT}.zip"
     local ZIPOUT="$SRC/$ZIPNAME"
 
     log_step "Creating $ZIPNAME..."
