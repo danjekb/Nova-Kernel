@@ -148,33 +148,31 @@ jobs:
         with:
           fetch-depth: 1
 
-      # ───────── Automatyczne nałożenie łatek sprzętowych ─────────
-      - name: 🩹  Apply Repository Patches (Flash, USB & Charging)
+      # ───────── Automatyczne wstrzykiwanie konfiguracji i poprawek ─────────
+      - name: 🩹  Apply Hardware Configs (Flash, USB & Charging)
         shell: bash
         run: |
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "  Applying hardware patches..."
+          echo "  Applying hardware configs and fixes..."
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          
-          # 1. Uniwersalna naprawa błędu w sterowniku latarki (zastępuje patch 0001)
           FLASHDRIVER="drivers/leds/leds-qti-flash.c"
           if [ -f "$FLASHDRIVER" ]; then
             if grep -q "qti_flash_led_switch_brightness_set" "$FLASHDRIVER"; then
               sed -i 's/qti_flash_led_switch_brightness_set/qti_flash_switch_brightness_set/g' "$FLASHDRIVER"
               echo "  ✔  Flashlight driver typo successfully fixed via sed!"
-            else
-              echo "  ℹ  Flashlight driver already clean or modified (typo not found)."
             fi
-          else
-            echo "  ⚠️  Warning: Flashlight driver file not found!"
           fi
-
-          # 2. Automatyczne nałożenie pozostałych patchy z folderu patches/ (np. USB/Ładowanie)
+          DEFCONFIG="arch/arm64/configs/nova_defconfig"
+          if [ -f "$DEFCONFIG" ]; then
+            echo -e "\nCONFIG_USB_GADGET=y\nCONFIG_USB_G_ANDROID=y\nCONFIG_USB_ANDROID_SAMSUNG_COMPOSITE=y\nCONFIG_USB_CONFIGFS=y\nCONFIG_USB_CONFIGFS_F_MTP=y\nCONFIG_USB_CONFIGFS_F_PTP=y\nCONFIG_USB_CONFIGFS_F_ACC=y\nCONFIG_USB_CONFIGFS_F_AUDIO_SRC=y\nCONFIG_USB_CONFIGFS_F_DIAG=y\nCONFIG_USB_CONFIGFS_F_CDEV=y\nCONFIG_USB_CONFIGFS_F_QDSS=y\nCONFIG_EXTCON=y\nCONFIG_EXTCON_SAMSUNG=y\nCONFIG_POWER_SUPPLY=y\nCONFIG_SAMSUNG_BATTERY=y\nCONFIG_SAMSUNG_RECOVERY_CHARGING=y" >> "$DEFCONFIG"
+            echo "  ✔  USB and Charging configurations successfully injected into defconfig!"
+          else
+            echo "  ❌ Error: Target defconfig file not found!"
+            exit 1
+          fi
           if [ -d "patches" ] && [ "$(ls -A patches/*.patch 2>/dev/null)" ]; then
             git apply --ignore-whitespace patches/*.patch
-            echo "  ✔  All repository config patches successfully applied!"
-          else
-            echo "  ℹ  No extra .patch files found in patches/ directory."
+            echo "  ✔  Additional patches applied!"
           fi
 
       - name: 📦  Install dependencies
@@ -286,8 +284,6 @@ jobs:
             a52sxq) DEVICE_DIR="A52S" ;;
             m52xq)  DEVICE_DIR="M52"  ;;
           esac
-
-          BUILD_TYPE_DIR="${{ fromJSON(github.event.inputs.kernelsu) == true && 'KSU' || 'GKI' }}"
 
           ZIP=$(find "$HOME/toolchains/NovaKernel/$DEVICE_DIR" -name "*.zip" | head -n1)
 
@@ -403,3 +399,4 @@ jobs:
             echo "| 👤 Triggered | @${{ github.actor }} |"
             echo "| 🕐 Time      | $(date '+%Y-%m-%d %H:%M:%S UTC') |"
           } >> "$GITHUB_STEP_SUMMARY"
+
