@@ -1,0 +1,18 @@
+From: Pan Zapalka <jarek@slopkernel.local>
+Subject: [PATCH] leds: qti-flash: Fix incorrect switch brightness function name
+
+Fix compilation error caused by calling non-existent function
+'qti_flash_led_switch_brightness_set'. The correct function name
+is 'qti_flash_switch_brightness_set'.
+
+--- a/drivers/leds/leds-qti-flash.c
++++ b/drivers/leds/leds-qti-flash.c
+@@ -623,7 +623,7 @@ ssize_t qti_flash_store(const char *buf, size_t count)
+ 	for (i = 0; i < led->num_snodes; i++) {
+ 		if (led->snode[i].cdev.name && 
+ 			!strcmp("led:switch_0", led->snode[i].cdev.name)) {
+-			qti_flash_led_switch_brightness_set(&led->snode[i].cdev, curr);
++			qti_flash_switch_brightness_set(&led->snode[i].cdev, curr);
+ 			break;
+ 		}
+ 	}
