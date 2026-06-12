@@ -153,26 +153,32 @@ jobs:
         shell: bash
         run: |
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "  Applying hardware configs and fixes..."
+          echo "  Injecting fixes into buildscript.sh..."
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          FLASHDRIVER="drivers/leds/leds-qti-flash.c"
-          if [ -f "$FLASHDRIVER" ]; then
-            if grep -q "qti_flash_led_switch_brightness_set" "$FLASHDRIVER"; then
-              sed -i 's/qti_flash_led_switch_brightness_set/qti_flash_switch_brightness_set/g' "$FLASHDRIVER"
-              echo "  ✔  Flashlight driver typo successfully fixed via sed!"
-            fi
-          fi
-          DEFCONFIG="arch/arm64/configs/nova_defconfig"
-          if [ -f "$DEFCONFIG" ]; then
-            echo -e "\nCONFIG_USB_GADGET=y\nCONFIG_USB_G_ANDROID=y\nCONFIG_USB_ANDROID_SAMSUNG_COMPOSITE=y\nCONFIG_USB_CONFIGFS=y\nCONFIG_USB_CONFIGFS_F_MTP=y\nCONFIG_USB_CONFIGFS_F_PTP=y\nCONFIG_USB_CONFIGFS_F_ACC=y\nCONFIG_USB_CONFIGFS_F_AUDIO_SRC=y\nCONFIG_USB_CONFIGFS_F_DIAG=y\nCONFIG_USB_CONFIGFS_F_CDEV=y\nCONFIG_USB_CONFIGFS_F_QDSS=y\nCONFIG_EXTCON=y\nCONFIG_EXTCON_SAMSUNG=y\nCONFIG_POWER_SUPPLY=y\nCONFIG_SAMSUNG_BATTERY=y\nCONFIG_SAMSUNG_RECOVERY_CHARGING=y" >> "$DEFCONFIG"
-            echo "  ✔  USB and Charging configurations successfully injected into defconfig!"
+          
+          BUILDSCRIPT="buildscript.sh"
+          if [ -f "$BUILDSCRIPT" ]; then
+            # Wstrzykujemy dopisywanie opcji USB i ładowania prosto do pliku .config tuż po wygenerowaniu defconfigu w buildscript
+            sed -i '/make .*defconfig/a \  echo -e "\\nCONFIG_USB_GADGET=y\\nCONFIG_USB_G_ANDROID=y\\nCONFIG_USB_ANDROID_SAMSUNG_COMPOSITE=y\\nCONFIG_USB_CONFIGFS=y\\nCONFIG_USB_CONFIGFS_F_MTP=y\\nCONFIG_USB_CONFIGFS_F_PTP=y\\nCONFIG_USB_CONFIGFS_F_ACC=y\\nCONFIG_USB_CONFIGFS_F_AUDIO_SRC=y\\nCONFIG_USB_CONFIGFS_F_DIAG=y\\nCONFIG_USB_CONFIGFS_F_CDEV=y\\nCONFIG_USB_CONFIGFS_F_QDSS=y\\nCONFIG_EXTCON=y\\nCONFIG_EXTCON_SAMSUNG=y\\nCONFIG_POWER_SUPPLY=y\\nCONFIG_SAMSUNG_BATTERY=y\\nCONFIG_SAMSUNG_RECOVERY_CHARGING=y" >> .config\n  make olddefconfig' "$BUILDSCRIPT"
+            echo "  ✔  USB & Charging configs dynamically tied to buildscript .config generation!"
           else
-            echo "  ❌ Error: Target defconfig file not found!"
+            echo "  ❌ Error: buildscript.sh not found!"
             exit 1
           fi
+
+          # Szerokie przeszukiwanie i naprawa sterownika latarki we wszystkich wariantach pliku leds-qti-flash
+          echo "  🔎 Checking flashlight drivers..."
+          find drivers/leds/ -name "leds-qti-flash*.c" | while read -r flasherd; do
+            if grep -q "qti_flash_led_switch_brightness_set" "$flasherd"; then
+              sed -i 's/qti_flash_led_switch_brightness_set/qti_flash_switch_brightness_set/g' "$flasherd"
+              echo "  ✔  Fixed typo in: $flasherd"
+            fi
+          done
+
+          # Jeśli masz tam jeszcze jakieś inne, stare patche w folderze, zostaną zaaplikowane
           if [ -d "patches" ] && [ "$(ls -A patches/*.patch 2>/dev/null)" ]; then
             git apply --ignore-whitespace patches/*.patch
-            echo "  ✔  Additional patches applied!"
+            echo "  ✔  Additional patches from patches/ directory applied!"
           fi
 
       - name: 📦  Install dependencies
@@ -399,4 +405,3 @@ jobs:
             echo "| 👤 Triggered | @${{ github.actor }} |"
             echo "| 🕐 Time      | $(date '+%Y-%m-%d %H:%M:%S UTC') |"
           } >> "$GITHUB_STEP_SUMMARY"
-
