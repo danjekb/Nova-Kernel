@@ -26,7 +26,7 @@ on:
 
       ksu_branch:
         description: "KernelSU branch"
-        required: false
+        required: true
         type: choice
         default: "legacy-susfs-v2"
         options:
@@ -45,7 +45,7 @@ on:
 
       hook_type:
         description: "KernelSU hook type (ignored if kernelsu = false)"
-        required: false
+        required: true
         type: choice
         default: "kprobes"
         options:
@@ -57,19 +57,19 @@ on:
 
       backport:
         description: "Apply backport patches? (ignored if kernelsu = false)"
-        required: false
+        required: true
         type: boolean
         default: false
 
       use_anykernel3:
         description: "Package with AnyKernel3? (false = raw image ZIP via magiskboot)"
-        required: false
+        required: true
         type: boolean
         default: false
 
       debug:
         description: "SELinux permissive (debug build)"
-        required: false
+        required: true
         type: boolean
         default: false
 
@@ -158,9 +158,9 @@ jobs:
           
           BUILDSCRIPT="buildscript.sh"
           if [ -f "$BUILDSCRIPT" ]; then
-            # Wstrzykujemy dopisywanie opcji USB i ładowania prosto do pliku .config tuż po wygenerowaniu defconfigu w buildscript
-            sed -i '/make .*defconfig/a \  echo -e "\\nCONFIG_USB_GADGET=y\\nCONFIG_USB_G_ANDROID=y\\nCONFIG_USB_ANDROID_SAMSUNG_COMPOSITE=y\\nCONFIG_USB_CONFIGFS=y\\nCONFIG_USB_CONFIGFS_F_MTP=y\\nCONFIG_USB_CONFIGFS_F_PTP=y\\nCONFIG_USB_CONFIGFS_F_ACC=y\\nCONFIG_USB_CONFIGFS_F_AUDIO_SRC=y\\nCONFIG_USB_CONFIGFS_F_DIAG=y\\nCONFIG_USB_CONFIGFS_F_CDEV=y\\nCONFIG_USB_CONFIGFS_F_QDSS=y\\nCONFIG_EXTCON=y\\nCONFIG_EXTCON_SAMSUNG=y\\nCONFIG_POWER_SUPPLY=y\\nCONFIG_SAMSUNG_BATTERY=y\\nCONFIG_SAMSUNG_RECOVERY_CHARGING=y" >> .config\n  make olddefconfig' "$BUILDSCRIPT"
-            echo "  ✔  USB & Charging configs dynamically tied to buildscript .config generation!"
+            # Wstrzykujemy konfigurację bezpiecznie do folderu out/ tuż przed wywołaniem właściwej kompilacji (make -j)
+            sed -i '/make -j/i \  if [ -f "out/.config" ]; then\n    echo -e "\\nCONFIG_USB_GADGET=y\\nCONFIG_USB_G_ANDROID=y\\nCONFIG_USB_ANDROID_SAMSUNG_COMPOSITE=y\\nCONFIG_USB_CONFIGFS=y\\nCONFIG_USB_CONFIGFS_F_MTP=y\\nCONFIG_USB_CONFIGFS_F_PTP=y\\nCONFIG_USB_CONFIGFS_F_ACC=y\\nCONFIG_USB_CONFIGFS_F_AUDIO_SRC=y\\nCONFIG_USB_CONFIGFS_F_DIAG=y\\nCONFIG_USB_CONFIGFS_F_CDEV=y\\nCONFIG_USB_CONFIGFS_F_QDSS=y\\nCONFIG_EXTCON=y\\nCONFIG_EXTCON_SAMSUNG=y\\nCONFIG_POWER_SUPPLY=y\\nCONFIG_SAMSUNG_BATTERY=y\\nCONFIG_SAMSUNG_RECOVERY_CHARGING=y" >> out/.config\n    make O=out olddefconfig\n  fi' "$BUILDSCRIPT"
+            echo "  ✔  USB & Charging configs safely injected right before compilation!"
           else
             echo "  ❌ Error: buildscript.sh not found!"
             exit 1
@@ -175,7 +175,7 @@ jobs:
             fi
           done
 
-          # Jeśli masz tam jeszcze jakieś inne, stare patche w folderze, zostaną zaaplikowane
+          # Jeśli masz tam dodatkowe patche w folderze
           if [ -d "patches" ] && [ "$(ls -A patches/*.patch 2>/dev/null)" ]; then
             git apply --ignore-whitespace patches/*.patch
             echo "  ✔  Additional patches from patches/ directory applied!"
