@@ -143,11 +143,45 @@ jobs:
       fail-fast: false
 
     steps:
-
       - name: 📥  Checkout source
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+
+      # ───────── Tutaaj aplikujemy poprawkę latarki dla Samsunga ─────────
+      - name: 🩹  Apply Samsung Flash Fix Patch
+        shell: bash
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "  Applying Samsung flash fix patch..."
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          
+          # Tworzenie patcha w locie, aby uniknąć problemów z czyszczeniem kodu
+          cat << 'EOF' > flash_fix.patch
+          From: Pan Zapalka <jarek@slopkernel.local>
+          Subject: [PATCH] leds: qti-flash: Fix incorrect switch brightness function name
+
+          --- a/drivers/leds/leds-qti-flash.c
+          +++ b/drivers/leds/leds-qti-flash.c
+          @@ -623,7 +623,7 @@ ssize_t qti_flash_store(const char *buf, size_t count)
+           	for (i = 0; i < led->num_snodes; i++) {
+           		if (led->snode[i].cdev.name && 
+           			!strcmp("led:switch_0", led->snode[i].cdev.name)) {
+          -			qti_flash_led_switch_brightness_set(&led->snode[i].cdev, curr);
+          +			qti_flash_switch_brightness_set(&led->snode[i].cdev, curr);
+           			break;
+           		}
+           	}
+          EOF
+
+          # Sprawdzenie, czy plik docelowy w ogóle istnieje w tym drzewie kodu
+          if [ -f "drivers/leds/leds-qti-flash.c" ]; then
+            git apply --ignore-whitespace flash_fix.patch
+            echo "  ✔  Patch successfully applied!"
+          else
+            echo "  ⚠️  Warning: drivers/leds/leds-qti-flash.c not found. Skipping patch."
+          fi
+          rm -f flash_fix.patch
 
       - name: 📦  Install dependencies
         run: |
@@ -168,8 +202,6 @@ jobs:
           swap-size-gb: 10
 
       # ───────── Detect clang version from configuration block ─────────
-      # Reads NK_CLANG_VERSION_DEFAULT from § 0 of buildscript.sh.
-      # This value is on its own line to make the grep reliable.
       - name: 🔎  Detect clang version
         id: clangver
         shell: bash
@@ -180,7 +212,8 @@ jobs:
 
           CLANGVER=$(grep -oP 'NK_CLANG_VERSION_DEFAULT="\K[^"]+' buildscript.sh)
 
-          if [[ -z "$CLANGVER" ]]; then
+          if [[ -z "$CLANGVER" ]];
+          then
             echo "::error::Failed to detect NK_CLANG_VERSION_DEFAULT from buildscript.sh"
             exit 1
           fi
@@ -205,8 +238,6 @@ jobs:
           fi
 
       # ───────── Stock image cache ─────────
-      # Images are large tarballs that never change per release tag.
-      # Caching them avoids ~300 MB of downloads on repeat builds.
       - name: 📂  Stock images cache
         id: img-cache
         uses: actions/cache@v4
@@ -253,9 +284,6 @@ jobs:
           ./buildscript.sh --phase build
 
       # ───────── Locate output ZIP ─────────
-      # Handles both packaging modes:
-      #   AK3 mode  → ZIP is in $DEVICE/$BUILD_TYPE/
-      #   Raw mode  → ZIP is in $DEVICE/$BUILD_TYPE/ (same location from gen_zip)
       - name: 🔍  Locate output ZIP
         id: find-zip
         run: |
@@ -267,11 +295,10 @@ jobs:
 
           BUILD_TYPE_DIR="${{ fromJSON(github.event.inputs.kernelsu) == true && 'KSU' || 'GKI' }}"
 
-          # Both gen_zip and package_anykernel3 place the ZIP under
-          # $TC_DIR/NovaKernel/$DEVICE/$BUILD_TYPE/  — one unified search.
           ZIP=$(find "$HOME/toolchains/NovaKernel/$DEVICE_DIR" -name "*.zip" | head -n1)
 
-          if [[ -z "$ZIP" ]]; then
+          if [[ -z "$ZIP" ]];
+          then
             echo "::error::No ZIP found for $DEVICE_DIR"
             exit 1
           fi
@@ -315,7 +342,8 @@ jobs:
           BACKPORT="${{ github.event.inputs.backport }}"
           RELEASE="${{ github.event.inputs.release_type }}"
 
-          if [[ "$RELEASE" == "stable" ]]; then
+          if [[ "$RELEASE" == "stable" ]];
+          then
             RELEASE_LABEL="✅ Stable"
           else
             RELEASE_LABEL="🧪 Beta"
@@ -327,7 +355,8 @@ jobs:
           REPO="${{ github.repository }}"
           COMMIT_LINK="<a href=\"https://github.com/${REPO}/commit/${FULL_SHA}\">${SHORT_SHA}</a>"
 
-          if [[ "$TYPE" == "GKI" ]]; then
+          if [[ "$TYPE" == "GKI" ]];
+          then
             CAPTION="$(printf '📦 <b>NovaKernel Build</b>\n\n📱 Device:    %s\n⚙️  Type:      %s\n🏷️  Release:   %s\n🕐 Time:      %s\n🔖 Commit:    %s\n\n📝 <b>Changelog:</b>\n%s' \
               "$DEVICE" "$TYPE" "$RELEASE_LABEL" "$TIME" "$COMMIT_LINK" "$CHANGELOG")"
           else
@@ -353,7 +382,8 @@ jobs:
           BACKPORT="${{ github.event.inputs.backport }}"
           AK3="${{ github.event.inputs.use_anykernel3 }}"
           RELEASE="${{ github.event.inputs.release_type }}"
-          if [[ "$RELEASE" == "stable" ]]; then
+          if [[ "$RELEASE" == "stable" ]];
+          then
             RELEASE_LABEL="✅ Stable"
           else
             RELEASE_LABEL="🧪 Beta"
