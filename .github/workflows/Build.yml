@@ -153,14 +153,28 @@ jobs:
         shell: bash
         run: |
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-          echo "  Applying hardware patches from repository..."
+          echo "  Applying hardware patches..."
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           
-          if [ -d "patches" ]; then
-            git apply --ignore-whitespace patches/*.patch
-            echo "  ✔  All patches successfully applied!"
+          # 1. Uniwersalna naprawa błędu w sterowniku latarki (zastępuje patch 0001)
+          FLASHDRIVER="drivers/leds/leds-qti-flash.c"
+          if [ -f "$FLASHDRIVER" ]; then
+            if grep -q "qti_flash_led_switch_brightness_set" "$FLASHDRIVER"; then
+              sed -i 's/qti_flash_led_switch_brightness_set/qti_flash_switch_brightness_set/g' "$FLASHDRIVER"
+              echo "  ✔  Flashlight driver typo successfully fixed via sed!"
+            else
+              echo "  ℹ  Flashlight driver already clean or modified (typo not found)."
+            fi
           else
-            echo "  ⚠️  Warning: patches/ directory not found! Skipping hardware fixes."
+            echo "  ⚠️  Warning: Flashlight driver file not found!"
+          fi
+
+          # 2. Automatyczne nałożenie pozostałych patchy z folderu patches/ (np. USB/Ładowanie)
+          if [ -d "patches" ] && [ "$(ls -A patches/*.patch 2>/dev/null)" ]; then
+            git apply --ignore-whitespace patches/*.patch
+            echo "  ✔  All repository config patches successfully applied!"
+          else
+            echo "  ℹ  No extra .patch files found in patches/ directory."
           fi
 
       - name: 📦  Install dependencies
